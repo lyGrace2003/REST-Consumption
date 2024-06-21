@@ -3,8 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:state_change_demo/src/models/post.model.dart';
 import 'package:state_change_demo/src/models/user.model.dart';
+import 'package:state_change_demo/src/screens/post_details.dart';
+
+//add and delete post works
 
 class RestDemoScreen extends StatefulWidget {
   const RestDemoScreen({super.key});
@@ -14,12 +18,10 @@ class RestDemoScreen extends StatefulWidget {
 }
 
 class _RestDemoScreenState extends State<RestDemoScreen> {
-  PostController controller = PostController();
-
   @override
   void initState() {
     super.initState();
-    controller.getPosts();
+    Provider.of<PostController>(context, listen: false).getPosts();
   }
 
   @override
@@ -29,7 +31,7 @@ class _RestDemoScreenState extends State<RestDemoScreen> {
         title: const Text("Posts"),
         leading: IconButton(
             onPressed: () {
-              controller.getPosts();
+              Provider.of<PostController>(context, listen: false).getPosts();
             },
             icon: const Icon(Icons.refresh)),
         actions: [
@@ -41,50 +43,99 @@ class _RestDemoScreenState extends State<RestDemoScreen> {
         ],
       ),
       body: SafeArea(
-        child: ListenableBuilder(
-            listenable: controller,
-            builder: (context, _) {
-              if (controller.error != null) {
-                return Center(
-                  child: Text(controller.error.toString()),
-                );
-              }
+        child: Consumer<PostController>(
+          builder: (context, controller, child) {
+            if (controller.error != null) {
+              return Center(
+                child: Text(controller.error.toString()),
+              );
+            }
 
-              if (!controller.working) {
-                return Center(
-                  child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (Post post in controller.postList)
-                            Container(
-                                padding: const EdgeInsets.all(8),
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                    border:
-                                        Border.all(color: Colors.blueAccent),
-                                    borderRadius: BorderRadius.circular(16)),
-                                child: Text(post.toString()))
-                        ],
-                      )),
-                );
-              }
-              return const Center(
-                child: SpinKitChasingDots(
-                  size: 54,
-                  color: Colors.black87,
+            if (!controller.working) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (Post post in controller.postList)
+                      PostCard(
+                        post: post,
+                        onDelete: () {
+                          controller.deletePost(post.id);
+                        },
+                      ),
+                  ],
                 ),
               );
-            }),
+            }
+            return const Center(
+              child: SpinKitChasingDots(
+                size: 54,
+                color: Colors.black87,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  showNewPostFunction(BuildContext context) {
-    AddPostDialog.show(context, controller: controller);
+  void showNewPostFunction(BuildContext context) {
+    AddPostDialog.show(context, controller: Provider.of<PostController>(context, listen: false));
   }
 }
+
+
+class PostCard extends StatelessWidget {
+  final Post post;
+  final VoidCallback onDelete;
+
+  const PostCard({required this.post, required this.onDelete, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => PostDetailsScreen(post: post),
+        ));
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.blueAccent),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(post.title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Text(post.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            Column(
+              children: [
+                IconButton(
+                  onPressed: onDelete,
+                  icon: Icon(Icons.delete, size: 18,),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 
 class AddPostDialog extends StatefulWidget {
   static show(BuildContext context, {required PostController controller}) =>
@@ -116,7 +167,7 @@ class _AddPostDialogState extends State<AddPostDialog> {
       actions: [
         ElevatedButton(
           onPressed: () async {
-            widget.controller.makePost(
+            await widget.controller.makePost(
                 title: titleC.text.trim(), body: bodyC.text.trim(), userId: 1);
             Navigator.of(context).pop();
           },
@@ -128,23 +179,30 @@ class _AddPostDialogState extends State<AddPostDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text("Title"),
-          Flexible(
-            child: TextFormField(
-              controller: titleC,
-            ),
+          TextFormField(
+            controller: titleC,
           ),
           const Text("Content"),
-          Flexible(
-            child: TextFormField(
-              controller: bodyC,
-            ),
+          TextFormField(
+            controller: bodyC,
           ),
         ],
       ),
     );
   }
+
+  @override
+  void dispose() {
+    bodyC.dispose();
+    titleC.dispose();
+    super.dispose();
+  }
 }
 
+
+
+
+//added update, and delete post
 class PostController with ChangeNotifier {
   Map<String, dynamic> posts = {};
   bool working = true;
@@ -158,24 +216,18 @@ class PostController with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Post> makePost(
-      {required String title,
-      required String body,
-      required int userId}) async {
+  Future<Post> makePost({required String title, required String body, required int userId}) async {
     try {
       working = true;
-      if(error != null ) error = null;
-      print(title);
-      print(body);
-      print(userId);
+      if (error != null) error = null;
+
       http.Response res = await HttpService.post(
           url: "https://jsonplaceholder.typicode.com/posts",
           body: {"title": title, "body": body, "userId": userId});
+      
       if (res.statusCode != 200 && res.statusCode != 201) {
         throw Exception("${res.statusCode} | ${res.body}");
       }
-
-      print(res.body);
 
       Map<String, dynamic> result = jsonDecode(res.body);
 
@@ -218,7 +270,57 @@ class PostController with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> updatePost({required int id, required String title, required String body, required int userId}) async {
+    try {
+      working = true;
+      if (error != null) error = null;
+
+      http.Response res = await HttpService.put(
+          url: "https://jsonplaceholder.typicode.com/posts/$id",
+          body: {"title": title, "body": body, "userId": userId});
+      if (res.statusCode != 200 && res.statusCode != 201) {
+        throw Exception("${res.statusCode} | ${res.body}");
+      }
+
+      Map<String, dynamic> result = jsonDecode(res.body);
+
+      Post output = Post.fromJson(result);
+      posts["$id"] = output;
+      working = false;
+      notifyListeners();
+    } catch (e, st) {
+      print(e);
+      print(st);
+      error = e;
+      working = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deletePost(int id) async {
+    try {
+      working = true;
+      if (error != null) error = null;
+      http.Response res = await HttpService.delete(
+          url: "https://jsonplaceholder.typicode.com/posts/$id");
+      if (res.statusCode != 200 && res.statusCode != 201) {
+        throw Exception("${res.statusCode} | ${res.body}");
+      }
+      posts.remove("$id");
+      working = false;
+      notifyListeners();
+    } catch (e, st) {
+      print(e);
+      print(st);
+      error = e;
+      working = false;
+      notifyListeners();
+    }
+  }
 }
+
+
 
 class UserController with ChangeNotifier {
   Map<String, dynamic> users = {};
@@ -257,6 +359,8 @@ class UserController with ChangeNotifier {
   }
 }
 
+
+//added put and delete service
 class HttpService {
   static Future<http.Response> get(
       {required String url, Map<String, dynamic>? headers}) async {
@@ -275,6 +379,27 @@ class HttpService {
     return http.post(uri, body: jsonEncode(body), headers: {
       'Content-Type': 'application/json',
       if (headers != null) ...headers
+    });
+  }
+
+  static Future<http.Response> put({
+    required String url,
+    required Map<dynamic,dynamic> body,
+    Map<String,dynamic>? headers}) async {
+    Uri uri = Uri.parse(url);
+    return http.put(uri, body: jsonEncode(body), headers: {
+      'Content-Type': 'application/json',
+      if (headers != null) ...headers,
+    });
+  }
+
+  static Future<http.Response> delete({
+    required String url,
+    Map<String, dynamic>? headers}) async {
+    Uri uri = Uri.parse(url);
+    return http.delete(uri, headers: {
+      'Content-Type': 'application/json',
+      if (headers != null) ...headers,
     });
   }
 }
