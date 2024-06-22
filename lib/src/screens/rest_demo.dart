@@ -80,16 +80,17 @@ class _RestDemoScreenState extends State<RestDemoScreen> {
   }
 
   void showNewPostFunction(BuildContext context) {
-    AddPostDialog.show(context, controller: Provider.of<PostController>(context, listen: false));
+    AddPostDialog.show(context,
+        controller: Provider.of<PostController>(context, listen: false));
   }
 }
-
 
 class PostCard extends StatelessWidget {
   final Post post;
   final VoidCallback onDelete;
 
-  const PostCard({required this.post, required this.onDelete, Key? key}) : super(key: key);
+  const PostCard({Key? key, required this.post, required this.onDelete})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -113,28 +114,49 @@ class PostCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(post.title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 8),
-                  Text(post.body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(post.title,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
-            Column(
-              children: [
-                IconButton(
-                  onPressed: onDelete,
-                  icon: Icon(Icons.delete, size: 18,),
-                ),
-              ],
-            ),
+            IconButton(onPressed: onDelete, icon: const Icon(Icons.delete))
           ],
+          // children: [
+          //   Expanded(
+          //     child: Column(
+          //       crossAxisAlignment: CrossAxisAlignment.start,
+          //       children: [
+          //         Text(post.title,
+          //             style: const TextStyle(
+          //                 fontSize: 16, fontWeight: FontWeight.bold)),
+          //         const SizedBox(height: 8),
+          //         Text(
+          //             post.body.length > 100
+          //                 ? '${post.body.substring(0, 97)}...'
+          //                 : post.body,
+          //             maxLines: 2,
+          //             overflow: TextOverflow.ellipsis),
+          //       ],
+          //     ),
+          //   ),
+          //   Column(
+          //     children: [
+          //       IconButton(
+          //         onPressed: onDelete,
+          //         icon: const Icon(
+          //           Icons.delete,
+          //           size: 18,
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ],
         ),
       ),
     );
   }
 }
-
-
 
 class AddPostDialog extends StatefulWidget {
   static show(BuildContext context, {required PostController controller}) =>
@@ -198,16 +220,14 @@ class _AddPostDialogState extends State<AddPostDialog> {
   }
 }
 
-
-
-
 //added update, and delete post
 class PostController with ChangeNotifier {
   Map<String, dynamic> posts = {};
   bool working = true;
   Object? error;
 
-  List<Post> get postList => posts.values.whereType<Post>().toList().reversed.toList();
+  List<Post> get postList =>
+      posts.values.whereType<Post>().toList().reversed.toList();
 
   clear() {
     error = null;
@@ -215,7 +235,10 @@ class PostController with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Post> makePost({required String title, required String body, required int userId}) async {
+  Future<Post> makePost(
+      {required String title,
+      required String body,
+      required int userId}) async {
     try {
       working = true;
       if (error != null) error = null;
@@ -223,7 +246,7 @@ class PostController with ChangeNotifier {
       http.Response res = await HttpService.post(
           url: "https://jsonplaceholder.typicode.com/posts",
           body: {"title": title, "body": body, "userId": userId});
-      
+
       if (res.statusCode != 200 && res.statusCode != 201) {
         throw Exception("${res.statusCode} | ${res.body}");
       }
@@ -270,7 +293,11 @@ class PostController with ChangeNotifier {
     }
   }
 
-  Future<void> updatePost({required int id, required String title, required String body, required int userId}) async {
+  Future<void> updatePost(
+      {required int id,
+      required String title,
+      required String body,
+      required int userId}) async {
     try {
       working = true;
       if (error != null) error = null;
@@ -319,8 +346,6 @@ class PostController with ChangeNotifier {
   }
 }
 
-
-
 class UserController with ChangeNotifier {
   Map<String, dynamic> users = {};
   bool working = true;
@@ -358,7 +383,6 @@ class UserController with ChangeNotifier {
   }
 }
 
-
 //added put and delete service
 class HttpService {
   static Future<http.Response> get(
@@ -381,10 +405,10 @@ class HttpService {
     });
   }
 
-  static Future<http.Response> put({
-    required String url,
-    required Map<dynamic,dynamic> body,
-    Map<String,dynamic>? headers}) async {
+  static Future<http.Response> put(
+      {required String url,
+      required Map<dynamic, dynamic> body,
+      Map<String, dynamic>? headers}) async {
     Uri uri = Uri.parse(url);
     return http.put(uri, body: jsonEncode(body), headers: {
       'Content-Type': 'application/json',
@@ -392,9 +416,8 @@ class HttpService {
     });
   }
 
-  static Future<http.Response> delete({
-    required String url,
-    Map<String, dynamic>? headers}) async {
+  static Future<http.Response> delete(
+      {required String url, Map<String, dynamic>? headers}) async {
     Uri uri = Uri.parse(url);
     return http.delete(uri, headers: {
       'Content-Type': 'application/json',
@@ -403,22 +426,32 @@ class HttpService {
   }
 }
 
-
-
-
 class PostDetailsScreen extends StatefulWidget {
   final Post post;
-  const PostDetailsScreen({required this.post, Key? key}) : super(key: key );
+  //const PostDetailsScreen({required this.post, super.key});
+  const PostDetailsScreen({super.key, required this.post});
+
+//   @override
+//   State<PostDetailsScreen> createState() => _PostDetailsScreenState();
+// }
 
   @override
-  State<PostDetailsScreen> createState() => _PostDetailsScreenState();
+  _PostDetailsScreenState createState() => _PostDetailsScreenState();
 }
 
 class _PostDetailsScreenState extends State<PostDetailsScreen> {
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.post.title),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: SingleChildScrollView(
+          child: Text(widget.post.body),
+        ),
+      ),
     );
   }
 }
