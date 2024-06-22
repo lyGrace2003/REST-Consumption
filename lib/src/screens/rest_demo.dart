@@ -293,18 +293,14 @@ class PostController with ChangeNotifier {
     }
   }
 
-  Future<void> updatePost(
-      {required int id,
-      required String title,
-      required String body,
-      required int userId}) async {
+  Future<Post?> updatePost({required int id, required String title, required String body, required int userId}) async {
     try {
       working = true;
       if (error != null) error = null;
-
       http.Response res = await HttpService.put(
-          url: "https://jsonplaceholder.typicode.com/posts/$id",
-          body: {"title": title, "body": body, "userId": userId});
+        url: "https://jsonplaceholder.typicode.com/posts/$id",
+        body: {"id": id, "title": title, "body": body, "userId": userId},
+      );
       if (res.statusCode != 200 && res.statusCode != 201) {
         throw Exception("${res.statusCode} | ${res.body}");
       }
@@ -312,15 +308,15 @@ class PostController with ChangeNotifier {
       Map<String, dynamic> result = jsonDecode(res.body);
 
       Post output = Post.fromJson(result);
-      posts["$id"] = output;
+      posts[output.id.toString()] = output;
       working = false;
       notifyListeners();
+      return output;
     } catch (e, st) {
-      print(e);
-      print(st);
       error = e;
       working = false;
       notifyListeners();
+      return null;
     }
   }
 
@@ -428,30 +424,127 @@ class HttpService {
 
 class PostDetailsScreen extends StatefulWidget {
   final Post post;
-  //const PostDetailsScreen({required this.post, super.key});
-  const PostDetailsScreen({super.key, required this.post});
 
-//   @override
-//   State<PostDetailsScreen> createState() => _PostDetailsScreenState();
-// }
+  const PostDetailsScreen({required this.post, Key? key}) : super(key: key);
 
   @override
   _PostDetailsScreenState createState() => _PostDetailsScreenState();
 }
 
 class _PostDetailsScreenState extends State<PostDetailsScreen> {
+  late Post _post;
+
+  @override
+  void initState() {
+    super.initState();
+    _post = widget.post;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.post.title),
+        title: Text(_post.title),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: () => showEditPostFunction(context, _post),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: SingleChildScrollView(
-          child: Text(widget.post.body),
+          child: Text(_post.body),
         ),
       ),
     );
   }
+
+  showEditPostFunction(BuildContext context, Post post) async {
+    final updatedPost = await EditPostDialog.show(
+      context,
+      post: post,
+      controller: Provider.of<PostController>(context, listen: false),
+    );
+    if (updatedPost != null) {
+      setState(() {
+        _post = updatedPost;
+      });
+    }
+  }
 }
+
+
+class EditPostDialog extends StatefulWidget {
+  static Future<Post?> show(BuildContext context, {required Post post, required PostController controller}) =>
+      showDialog(
+        context: context,
+        builder: (dContext) => EditPostDialog(post, controller),
+      );
+
+  const EditPostDialog(this.post, this.controller, {super.key});
+
+  final Post post;
+  final PostController controller;
+
+  @override
+  State<EditPostDialog> createState() => _EditPostDialogState();
+}
+
+class _EditPostDialogState extends State<EditPostDialog> {
+  late TextEditingController bodyC, titleC;
+
+  @override
+  void initState() {
+    super.initState();
+    bodyC = TextEditingController(text: widget.post.body);
+    titleC = TextEditingController(text: widget.post.title);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      title: const Text("Edit Post"),
+      actions: [
+        ElevatedButton(
+          onPressed: () async {
+            final updatedPost = await widget.controller.updatePost(
+              id: widget.post.id,
+              title: titleC.text.trim(),
+              body: bodyC.text.trim(),
+              userId: widget.post.userId,
+            );
+            Navigator.of(context).pop(updatedPost);
+          },
+          child: const Text("Save"),
+        ),
+      ],
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Title"),
+          TextFormField(
+            controller: titleC,
+          ),
+          const SizedBox(height: 8),
+          const Text("Content"),
+          TextFormField(
+            controller: bodyC,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    bodyC.dispose();
+    titleC.dispose();
+    super.dispose();
+  }
+}
+
+
