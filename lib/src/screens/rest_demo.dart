@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:state_change_demo/src/models/post.model.dart';
 import 'package:state_change_demo/src/models/user.model.dart';
-import 'package:state_change_demo/src/screens/post_details.dart';
 
 //add and delete post works
 
@@ -208,7 +207,7 @@ class PostController with ChangeNotifier {
   bool working = true;
   Object? error;
 
-  List<Post> get postList => posts.values.whereType<Post>().toList();
+  List<Post> get postList => posts.values.whereType<Post>().toList().reversed.toList();
 
   clear() {
     error = null;
@@ -401,5 +400,25 @@ class HttpService {
       'Content-Type': 'application/json',
       if (headers != null) ...headers,
     });
+  }
+}
+
+
+
+
+class PostDetailsScreen extends StatefulWidget {
+  final Post post;
+  const PostDetailsScreen({required this.post, Key? key}) : super(key: key );
+
+  @override
+  State<PostDetailsScreen> createState() => _PostDetailsScreenState();
+}
+
+class _PostDetailsScreenState extends State<PostDetailsScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      
+    );
   }
 }
