@@ -38,7 +38,7 @@ class _RestDemoScreenState extends State<RestDemoScreen> {
               onPressed: () {
                 showNewPostFunction(context);
               },
-              icon: const Icon(Icons.add))
+              icon: const Icon(Icons.add, color: Color(0xFF00BF62)))
         ],
       ),
       body: SafeArea(
@@ -70,7 +70,7 @@ class _RestDemoScreenState extends State<RestDemoScreen> {
             return const Center(
               child: SpinKitChasingDots(
                 size: 54,
-                color: Colors.black87,
+                color: Color(0xFF00BF62),
               ),
             );
           },
@@ -89,8 +89,7 @@ class PostCard extends StatelessWidget {
   final Post post;
   final VoidCallback onDelete;
 
-  const PostCard({Key? key, required this.post, required this.onDelete})
-      : super(key: key);
+  const PostCard({super.key, required this.post, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -101,11 +100,11 @@ class PostCard extends StatelessWidget {
         ));
       },
       child: Container(
-        padding: const EdgeInsets.all(8),
-        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 15),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.blueAccent),
-          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF00BF62), width: 2),
+          borderRadius: BorderRadius.circular(35),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -154,6 +153,7 @@ class PostCard extends StatelessWidget {
           // ],
         ),
       ),
+      // ),
     );
   }
 }
@@ -184,7 +184,10 @@ class _AddPostDialogState extends State<AddPostDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      title: const Text("Add new post"),
+      title: const Text(
+        "Add new post",
+        style: TextStyle(color: Color(0xFF00BF62)),
+      ),
       actions: [
         ElevatedButton(
           onPressed: () async {
@@ -192,7 +195,13 @@ class _AddPostDialogState extends State<AddPostDialog> {
                 title: titleC.text.trim(), body: bodyC.text.trim(), userId: 1);
             Navigator.of(context).pop();
           },
-          child: const Text("Add"),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00BF62),
+          ),
+          child: const Text(
+            "Add",
+            style: TextStyle(color: Colors.white),
+          ),
         )
       ],
       content: Column(
@@ -293,7 +302,11 @@ class PostController with ChangeNotifier {
     }
   }
 
-  Future<Post?> updatePost({required int id, required String title, required String body, required int userId}) async {
+  Future<Post?> updatePost(
+      {required int id,
+      required String title,
+      required String body,
+      required int userId}) async {
     try {
       working = true;
       if (error != null) error = null;
@@ -312,7 +325,7 @@ class PostController with ChangeNotifier {
       working = false;
       notifyListeners();
       return output;
-    } catch (e, st) {
+    } catch (e) {
       error = e;
       working = false;
       notifyListeners();
@@ -425,7 +438,7 @@ class HttpService {
 class PostDetailsScreen extends StatefulWidget {
   final Post post;
 
-  const PostDetailsScreen({required this.post, Key? key}) : super(key: key);
+  const PostDetailsScreen({required this.post, super.key});
 
   @override
   _PostDetailsScreenState createState() => _PostDetailsScreenState();
@@ -447,13 +460,16 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
         title: Text(_post.title),
         actions: [
           IconButton(
-            icon: Icon(Icons.edit),
+            icon: const Icon(
+              Icons.edit,
+              color: Color(0xFF00BF62),
+            ),
             onPressed: () => showEditPostFunction(context, _post),
           ),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(30.0),
         child: SingleChildScrollView(
           child: Text(_post.body),
         ),
@@ -475,9 +491,9 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
   }
 }
 
-
 class EditPostDialog extends StatefulWidget {
-  static Future<Post?> show(BuildContext context, {required Post post, required PostController controller}) =>
+  static Future<Post?> show(BuildContext context,
+          {required Post post, required PostController controller}) =>
       showDialog(
         context: context,
         builder: (dContext) => EditPostDialog(post, controller),
@@ -506,7 +522,10 @@ class _EditPostDialogState extends State<EditPostDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      title: const Text("Edit Post"),
+      title: const Text(
+        "Edit Post",
+        style: TextStyle(color: Color(0xFF00BF62)),
+      ),
       actions: [
         ElevatedButton(
           onPressed: () async {
@@ -518,7 +537,13 @@ class _EditPostDialogState extends State<EditPostDialog> {
             );
             Navigator.of(context).pop(updatedPost);
           },
-          child: const Text("Save"),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00BF62),
+          ),
+          child: const Text(
+            "Save",
+            style: TextStyle(color: Colors.white),
+          ),
         ),
       ],
       content: Column(
@@ -546,5 +571,3 @@ class _EditPostDialogState extends State<EditPostDialog> {
     super.dispose();
   }
 }
-
-
